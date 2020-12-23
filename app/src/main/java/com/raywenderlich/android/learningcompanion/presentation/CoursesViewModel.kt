@@ -36,33 +36,65 @@ package com.raywenderlich.android.learningcompanion.presentation
 
 import androidx.hilt.lifecycle.ViewModelInject
 import androidx.lifecycle.*
+import com.raywenderlich.android.learningcompanion.data.FilterOption
 import com.raywenderlich.android.learningcompanion.data.getCourseList
+import com.raywenderlich.android.learningcompanion.data.model.Course
+import com.raywenderlich.android.learningcompanion.data.model.CourseLevel
 import com.raywenderlich.android.learningcompanion.data.preferences.SharedPrefs
 import com.raywenderlich.android.learningcompanion.prefstore.PrefsStore
+import com.raywenderlich.android.learningcompanion.protostore.ProtoStore
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 class CoursesViewModel @ViewModelInject constructor(
-        private val prefsStore: PrefsStore
+        private val prefsStore: PrefsStore,
+        private val protoStore: ProtoStore
 ) : ViewModel() {
+    private val courseUiModelFlow = combine(getCourseList(), protoStore.filtersFlow) {
+        courses: List<Course>, filterOption: FilterOption ->
+        return@combine CourseUiModel(
+                courses = filterCourses(courses, filterOption),
+                filter = filterOption.filter
+        )
+    }
     private val _darkThemeEnabled = MutableLiveData<Boolean>()
     val darkThemeEnabled = prefsStore.isNightMode().asLiveData()
     val courses = getCourseList().asLiveData()
+    val courseUiModel = courseUiModelFlow.asLiveData()
+
+    private fun filterCourses(courses: List<Course>, filterOption: FilterOption): List<Course> {
+        return when (filterOption.filter) {
+            FilterOption.Filter.BEGINNER -> courses.filter { it.level == CourseLevel.BEGINNER }
+            FilterOption.Filter.NONE -> courses
+            FilterOption.Filter.ADVANCED -> courses.filter { it.level == CourseLevel.ADVANCED }
+            FilterOption.Filter.COMPLETED -> courses.filter { it.completed }
+            FilterOption.Filter.BEGINNER_ADVANCED -> courses.filter {
+                it.level == CourseLevel.BEGINNER || it.level == CourseLevel.ADVANCED }
+            FilterOption.Filter.BEGINNER_COMPLETED -> courses.filter {
+                it.level == CourseLevel.BEGINNER || it.completed }
+            FilterOption.Filter.ADVANCED_COMPLETED -> courses.filter {
+                it.level == CourseLevel.ADVANCED || it.completed }
+            FilterOption.Filter.ALL -> courses
+            // There shouldn't be any other value for filtering
+            else -> throw UnsupportedOperationException("$filterOption doesn't exist.")
+        }
+    }
 
     fun enableBeginnerFilter(enable: Boolean) {
         viewModelScope.launch {
-            // Add a call to proto store to enable beginner filter
+            protoStore.enableBeginnerFilter(enable)
         }
     }
 
     fun enableAdvancedFilter(enable: Boolean) {
         viewModelScope.launch {
-            // Add a call to proto store to enable advanced filter
+            protoStore.enableAdvancedFilter(enable)
         }
     }
 
     fun enableCompletedFilter(enable: Boolean) {
         viewModelScope.launch {
-            // Add a call to proto store to enable completed filter
+            protoStore.enableCompleteFilter(enable)
         }
     }
 
@@ -72,5 +104,4 @@ class CoursesViewModel @ViewModelInject constructor(
         }
     }
 }
-
-//data class CourseUiModel(val courses: List<Course>, val filter: FilterOption.Filter)
+data class CourseUiModel(val courses: List<Course>, val filter: FilterOption.Filter)
