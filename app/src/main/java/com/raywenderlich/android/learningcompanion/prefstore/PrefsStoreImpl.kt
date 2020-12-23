@@ -2,6 +2,7 @@ package com.raywenderlich.android.learningcompanion.prefstore
 
 import android.content.Context
 import androidx.datastore.preferences.SharedPreferencesMigration
+import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.preferencesKey
 import androidx.datastore.preferences.createDataStore
@@ -24,16 +25,18 @@ class PrefsStoreImpl @Inject constructor(
     )
 
     override fun isNightMode(): Flow<Boolean> = dataStore.data.catch { exception ->
-                // dataStore.data throws an IOException if it can't read the data
-                if (exception is IOException) {
-                    emit(emptyPreferences())
-                } else {
-                    throw exception
-                }
-            }.map { it[PreferencesKeys.NIGHT_MODE_KEY] ?: false }
+        // dataStore.data throws an IOException if it can't read the data
+        if (exception is IOException) {
+            emit(emptyPreferences())
+        } else {
+            throw exception
+        }
+    }.map { it[PreferencesKeys.NIGHT_MODE_KEY] ?: false }
 
     override suspend fun toggleNightMode() {
-
+        dataStore.edit {
+            it[PreferencesKeys.NIGHT_MODE_KEY] = !(it[PreferencesKeys.NIGHT_MODE_KEY] ?: false)
+        }
     }
 
     private object PreferencesKeys {

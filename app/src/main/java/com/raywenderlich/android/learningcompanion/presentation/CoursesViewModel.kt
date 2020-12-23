@@ -38,18 +38,15 @@ import androidx.hilt.lifecycle.ViewModelInject
 import androidx.lifecycle.*
 import com.raywenderlich.android.learningcompanion.data.getCourseList
 import com.raywenderlich.android.learningcompanion.data.preferences.SharedPrefs
+import com.raywenderlich.android.learningcompanion.prefstore.PrefsStore
 import kotlinx.coroutines.launch
 
 class CoursesViewModel @ViewModelInject constructor(
-        private val sharedPrefs: SharedPrefs
+        private val prefsStore: PrefsStore
 ) : ViewModel() {
     private val _darkThemeEnabled = MutableLiveData<Boolean>()
-    val darkThemeEnabled: LiveData<Boolean> = _darkThemeEnabled
+    val darkThemeEnabled = prefsStore.isNightMode().asLiveData()
     val courses = getCourseList().asLiveData()
-
-    init {
-        _darkThemeEnabled.value = sharedPrefs.isDarkThemeEnabled()
-    }
 
     fun enableBeginnerFilter(enable: Boolean) {
         viewModelScope.launch {
@@ -71,9 +68,7 @@ class CoursesViewModel @ViewModelInject constructor(
 
     fun toggleNightMode() {
         viewModelScope.launch {
-            val darkThemeEnabled = _darkThemeEnabled.value!!
-            sharedPrefs.setDarkThemeEnabled(!darkThemeEnabled)
-            _darkThemeEnabled.value = !darkThemeEnabled
+            prefsStore.toggleNightMode()
         }
     }
 }
